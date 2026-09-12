@@ -113,16 +113,17 @@ pub fn render_comment_markdown(summary: &CostSummaryComment) -> String {
 
     // Network + config info
     md.push_str(&format!(
-        "**Network:** `{}` | **Config ledger:** `{}` | **Snapshot:** `{}`\n\n",
+        "**Network:** `{}` | **Config ledger:** `{}` | **Source:** `{}` | **Snapshot:** `{}`\n\n",
         summary.rent_forecast.network,
         summary.rent_forecast.config_ledger,
+        summary.rent_forecast.config_source,
         summary.rent_forecast.config_timestamp,
     ));
 
     // Rent forecast table
     md.push_str("### Storage Rent Forecast\n\n");
-    md.push_str("| Tier | Days | Rent (stroops) | Rent (XLM) | Daily (stroops) |\n");
-    md.push_str("|------|------|----------------|------------|------------------|\n");
+    md.push_str("| Tier | Days | Size (B) | Rent (stroops) | Rent (XLM) | Daily (stroops) |\n");
+    md.push_str("|------|------|----------|----------------|------------|------------------|\n");
 
     let tiers = [
         crate::rent_forecast::StorageTier::Instance,
@@ -138,9 +139,16 @@ pub fn render_comment_markdown(summary: &CostSummaryComment) -> String {
             .filter(|e| e.tier == *tier)
             .collect();
         for entry in entries {
+            // Size matters: a footprint can hold several entries of the same
+            // tier at different sizes, and without it the rows are ambiguous.
             md.push_str(&format!(
-                "| {} | {} | {} | {:.8} | {} |\n",
-                entry.tier, entry.days, entry.rent_stroops, entry.rent_xlm, entry.daily_stroops,
+                "| {} | {} | {} | {} | {:.8} | {} |\n",
+                entry.tier,
+                entry.days,
+                entry.size_bytes,
+                entry.rent_stroops,
+                entry.rent_xlm,
+                entry.daily_stroops,
             ));
         }
     }
@@ -203,6 +211,10 @@ mod tests {
             network: "testnet".to_string(),
             config_timestamp: "2026-09-10T00:00:00Z".to_string(),
             config_ledger: 1000,
+            config_source: "unit-test".to_string(),
+            effective_rent_rate_1kb: 1_267,
+            rate_basis: "unit-test".to_string(),
+            soroban_state_size_bytes: None,
             entries: vec![
                 RentForecastEntry {
                     tier: StorageTier::Persistent,
@@ -267,6 +279,12 @@ mod tests {
         assert!(md.contains("Persistent"));
         assert!(md.contains("testnet"));
         assert!(md.contains("soroban-cost-benchmarks"));
+        // The size column keeps same-tier rows distinguishable.
+        assert!(md.contains("| Size (B) |"), "missing size column:\n{md}");
+        assert!(
+            md.contains("| Persistent | 30 | 1024 |"),
+            "missing size value:\n{md}"
+        );
     }
 
     #[test]
