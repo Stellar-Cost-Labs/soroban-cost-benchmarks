@@ -1,0 +1,109 @@
+{
+  "network": "testnet",
+  "config_timestamp": "demo-config",
+  "config_ledger": 0,
+  "config_source": "demo-config (NOT network data)",
+  "effective_rent_rate_1kb": 1267,
+  "rate_basis": "interpolated (state 0 < target 1)",
+  "soroban_state_size_bytes": 0,
+  "entries": [
+    {
+      "tier": "Persistent",
+      "days": 30,
+      "ledgers": 518400,
+      "size_bytes": 1024,
+      "rent_stroops": 160355,
+      "rent_xlm": 0.0160355,
+      "daily_stroops": 5345
+    },
+    {
+      "tier": "Persistent",
+      "days": 180,
+      "ledgers": 3110400,
+      "size_bytes": 1024,
+      "rent_stroops": 962129,
+      "rent_xlm": 0.0962129,
+      "daily_stroops": 5345
+    },
+    {
+      "tier": "Persistent",
+      "days": 365,
+      "ledgers": 6307200,
+      "size_bytes": 1024,
+      "rent_stroops": 1950983,
+      "rent_xlm": 0.1950983,
+      "daily_stroops": 5345
+    },
+    {
+      "tier": "Persistent",
+      "days": 30,
+      "ledgers": 518400,
+      "size_bytes": 2048,
+      "rent_stroops": 320710,
+      "rent_xlm": 0.032071,
+      "daily_stroops": 10690
+    },
+    {
+      "tier": "Persistent",
+      "days": 180,
+      "ledgers": 3110400,
+      "size_bytes": 2048,
+      "rent_stroops": 1924257,
+      "rent_xlm": 0.1924257,
+      "daily_stroops": 10690
+    },
+    {
+      "tier": "Persistent",
+      "days": 365,
+      "ledgers": 6307200,
+      "size_bytes": 2048,
+      "rent_stroops": 3901965,
+      "rent_xlm": 0.3901965,
+      "daily_stroops": 10690
+    },
+    {
+      "tier": "Temporary",
+      "days": 30,
+      "ledgers": 518400,
+      "size_bytes": 512,
+      "rent_stroops": 80178,
+      "rent_xlm": 0.0080178,
+      "daily_stroops": 2672
+    },
+    {
+      "tier": "Temporary",
+      "days": 180,
+      "ledgers": 3110400,
+      "size_bytes": 512,
+      "rent_stroops": 481065,
+      "rent_xlm": 0.0481065,
+      "daily_stroops": 2672
+    },
+    {
+      "tier": "Temporary",
+      "days": 365,
+      "ledgers": 6307200,
+      "size_bytes": 512,
+      "rent_stroops": 975492,
+      "rent_xlm": 0.0975492,
+      "daily_stroops": 2672
+    }
+  ],
+  "summary": [
+    {
+      "days": 30,
+      "total_stroops": 561243,
+      "total_xlm": 0.0561243
+    },
+    {
+      "days": 180,
+      "total_stroops": 3367451,
+      "total_xlm": 0.3367451
+    },
+    {
+      "days": 365,
+      "total_stroops": 6828440,
+      "total_xlm": 0.682844
+    }
+  ]
+}
