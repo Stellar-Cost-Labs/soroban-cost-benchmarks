@@ -29,6 +29,10 @@ pub enum BenchError {
     #[error("Missing config data: {0}")]
     MissingConfig(String),
 
+    /// Failed to fetch or decode live network configuration.
+    #[error("live config error: {0}")]
+    LiveConfig(String),
+
     /// GitHub API error.
     #[error("GitHub API error: {0}")]
     GitHub(#[from] octocrab::Error),
