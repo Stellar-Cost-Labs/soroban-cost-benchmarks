@@ -61,6 +61,8 @@ pub struct BenchmarkReport {
     pub network: String,
     /// Config snapshot timestamp.
     pub config_timestamp: String,
+    /// Where the rent rates came from (live RPC fetch, snapshot file, or demo).
+    pub config_source: String,
     /// All scenario results.
     pub results: Vec<BenchmarkResult>,
     /// Delta between first and last scenario (if multiple).
@@ -228,6 +230,8 @@ mod tests {
             rent_fee_1kb_low: 1_267,
             rent_fee_1kb_high: 1_267,
             rent_fee_growth_factor: 0,
+            state_target_size_bytes: 1,
+            soroban_state_size_bytes: Some(0),
         }
     }
 
