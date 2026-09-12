@@ -13,6 +13,7 @@
 pub mod benchmark;
 pub mod compare;
 pub mod error;
+pub mod live_config;
 pub mod pr_comment;
 pub mod rent_forecast;
 pub mod wasm_metrics;
