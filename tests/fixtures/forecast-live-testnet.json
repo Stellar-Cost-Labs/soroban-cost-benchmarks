@@ -1,0 +1,109 @@
+{
+  "network": "testnet",
+  "config_timestamp": "2026-09-12T08:05:33.096494179+00:00",
+  "config_ledger": 4635349,
+  "config_source": "rpc:getLedgerEntries@4635349 (testnet)",
+  "effective_rent_rate_1kb": 1000,
+  "rate_basis": "interpolated (state 2659201588 < target 4000000000)",
+  "soroban_state_size_bytes": 2659201588,
+  "entries": [
+    {
+      "tier": "Persistent",
+      "days": 30,
+      "ledgers": 518400,
+      "size_bytes": 1024,
+      "rent_stroops": 426667,
+      "rent_xlm": 0.0426667,
+      "daily_stroops": 14222
+    },
+    {
+      "tier": "Persistent",
+      "days": 180,
+      "ledgers": 3110400,
+      "size_bytes": 1024,
+      "rent_stroops": 2560000,
+      "rent_xlm": 0.256,
+      "daily_stroops": 14222
+    },
+    {
+      "tier": "Persistent",
+      "days": 365,
+      "ledgers": 6307200,
+      "size_bytes": 1024,
+      "rent_stroops": 5191112,
+      "rent_xlm": 0.5191112,
+      "daily_stroops": 14222
+    },
+    {
+      "tier": "Persistent",
+      "days": 30,
+      "ledgers": 518400,
+      "size_bytes": 2048,
+      "rent_stroops": 853334,
+      "rent_xlm": 0.0853334,
+      "daily_stroops": 28444
+    },
+    {
+      "tier": "Persistent",
+      "days": 180,
+      "ledgers": 3110400,
+      "size_bytes": 2048,
+      "rent_stroops": 5120000,
+      "rent_xlm": 0.512,
+      "daily_stroops": 28444
+    },
+    {
+      "tier": "Persistent",
+      "days": 365,
+      "ledgers": 6307200,
+      "size_bytes": 2048,
+      "rent_stroops": 10382223,
+      "rent_xlm": 1.0382223,
+      "daily_stroops": 28444
+    },
+    {
+      "tier": "Temporary",
+      "days": 30,
+      "ledgers": 518400,
+      "size_bytes": 512,
+      "rent_stroops": 106667,
+      "rent_xlm": 0.0106667,
+      "daily_stroops": 3555
+    },
+    {
+      "tier": "Temporary",
+      "days": 180,
+      "ledgers": 3110400,
+      "size_bytes": 512,
+      "rent_stroops": 640000,
+      "rent_xlm": 0.064,
+      "daily_stroops": 3555
+    },
+    {
+      "tier": "Temporary",
+      "days": 365,
+      "ledgers": 6307200,
+      "size_bytes": 512,
+      "rent_stroops": 1297778,
+      "rent_xlm": 0.1297778,
+      "daily_stroops": 3555
+    }
+  ],
+  "summary": [
+    {
+      "days": 30,
+      "total_stroops": 1386668,
+      "total_xlm": 0.1386668
+    },
+    {
+      "days": 180,
+      "total_stroops": 8320000,
+      "total_xlm": 0.8320000000000001
+    },
+    {
+      "days": 365,
+      "total_stroops": 16871113,
+      "total_xlm": 1.6871113
+    }
+  ]
+}
