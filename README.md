@@ -47,19 +47,39 @@ cargo install soroban-cost-benchmarks
 
 ### Storage-rent forecast
 
+By default the forecast fetches the network's `ConfigSetting*` entries live, so
+no setup is needed:
+
 ```bash
-# Using a config snapshot from soroban-cost-estimator
-soroban-cost-estimator config snapshot --network testnet
 soroban-cost-benchmarks rent-forecast \
-  --config-snapshot ~/.soroban-cost-estimator/snapshots/testnet-latest.json \
   --entry persistent:1024 \
   --entry persistent:2048 \
   --entry temporary:512
+```
 
-# Demo mode (no network required)
+Show exactly where the rates came from (ledger, per-setting provenance, the live
+state size, and the resulting effective rate):
+
+```bash
+soroban-cost-benchmarks live-config
+soroban-cost-benchmarks live-config --out snapshot.json   # also write the snapshot
+```
+
+Reuse a saved snapshot instead of hitting the network:
+
+```bash
 soroban-cost-benchmarks rent-forecast \
-  --entry persistent:1024 \
-  --entry temporary:512
+  --config-snapshot snapshot.json \
+  --entry persistent:1024
+```
+
+Placeholder rates are opt-in only, and are labelled as such in every output
+format:
+
+```bash
+soroban-cost-benchmarks rent-forecast --allow-demo --entry persistent:1024
+# ℹ️  --allow-demo: using placeholder rent rates. These are NOT network data ...
+# JSON gets:  "config_source": "demo-config (NOT network data)", "config_ledger": 0
 ```
 
 ### WASM metrics
@@ -105,17 +125,44 @@ soroban-cost-benchmarks pr-comment \
 
 ## Storage-rent formula
 
-From [CAP-0046-12](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-12.md):
+Rent is a two-step computation, mirroring
+[`rs-soroban-env` `fees.rs`](https://github.com/stellar/rs-soroban-env/blob/main/soroban-env-host/src/fees.rs)
+(`compute_rent_write_fee_per_1kb` → `rent_fee_for_size_and_ledgers`). See
+[CAP-0046-12](https://github.com/stellar/stellar-protocol/blob/master/core/cap-0046-12.md)
+for the protocol background.
+
+**Step 1 — effective rate per 1 KB**, interpolated across the Soroban state
+size curve and floored:
 
 ```
-rent_fee = (size_bytes × ledgers_in_period × rent_rate) / (1024 × rate_denominator)
+multiplier = max(high - low, 0)
+if state_size < state_target_size_bytes:
+    rate = ceil(multiplier × state_size / state_target_size_bytes) + low
+else:
+    rate = high + ceil(multiplier × (state_size - target) × growth_factor / target)
+rate = max(rate, 1000)          # MINIMUM_RENT_WRITE_FEE_PER_1KB
+```
+
+**Step 2 — fee for a size and a number of ledgers**, integer `ceil` division:
+
+```
+rent_fee = ceil(size_bytes × rate × ledgers) / (1024 × rate_denominator)
 ```
 
 Where:
-- `rent_rate` = `rent_fee1_kb_soroban_state_size_low` (conservative default)
-- `rate_denominator` = `persistent_rent_rate_denominator` or
-  `temp_rent_rate_denominator` from `StateArchivalV0`
-- Growth factor applied as: `effective_rate = rent_rate × (1 + growth_factor / 10000)`
+- `low`/`high` = `rent_fee1_kb_soroban_state_size_{low,high}` from
+  `ConfigSettingContractLedgerCostV0`
+- `growth_factor` = `soroban_state_rent_fee_growth_factor` — a **raw multiplier**
+  applied only to state beyond the target, *not* a percentage, and inert while
+  the network is below target
+- `state_size` = mean of the on-chain `LiveSorobanStateSizeWindow` samples
+- `rate_denominator` = `persistent_rent_rate_denominator` (Persistent and
+  Instance) or `temp_rent_rate_denominator` (Temporary) from `StateArchivalV0`
+
+On testnet (2026-09-12) `low = -17000`, so early versions of this tool that used
+`low` directly as the rate produced **zero** rent. The floor is what makes real
+output non-zero. See [`tests/fixtures/README.md`](tests/fixtures/README.md) for
+the captured evidence, including the live-vs-demo comparison.
 
 ---
 
@@ -126,12 +173,15 @@ soroban-cost-benchmarks
 ├── src/
 │   ├── lib.rs              # Library root
 │   ├── rent_forecast.rs    # Lead feature: 30/180/365-day rent projections
+│   ├── live_config.rs      # Live ConfigSetting* fetch (upstream-bug workaround)
 │   ├── wasm_metrics.rs     # WASM static analysis (code/data sizes, counts)
 │   ├── benchmark.rs        # Multi-scenario benchmarking (empty vs populated)
 │   ├── compare.rs          # Historical comparison & regression detection
 │   ├── pr_comment.rs       # GitHub PR comment bot (update-in-place)
 │   ├── error.rs            # Error types
 │   └── main.rs             # CLI binary
+├── tests/fixtures/         # Captured real evidence (see its README)
+├── docs/                   # Prepared upstream issue report
 ├── Cargo.toml
 ├── LICENSE-MIT
 ├── LICENSE-APACHE
@@ -148,6 +198,26 @@ as a **library** (crates.io v0.1.0), not a CLI wrapper. It imports:
 - `config_snapshot::model::ContractLedgerCostV0` — rent fee rates
 
 It does **not** re-implement RPC simulation or WASM parsing from the estimator.
+
+### Known upstream issue, and the workaround here
+
+`soroban-cost-estimator` v0.1.0's `config snapshot` command stamps
+`ConfigSnapshot.ledger` with the **max `last_modified_ledger` of the fetched
+`ConfigSetting*` entries**, not the network's current ledger, so it reports the
+same long-stale ledger on every run (observed: `3470630` while the live ledger
+was `4635348`).
+
+Until that is fixed, `src/live_config.rs` fetches the same entries via
+`getLedgerEntries` and stamps the snapshot with the current ledger from
+`getLatestLedger`. **This is a deliberate workaround for a tracked upstream bug,
+not an independent reimplementation** — it reuses the estimator's own
+`RpcClient`, `fetch_all_config_settings`, and XDR helpers, and only differs in
+how the ledger is stamped. It should be deleted once the upstream issue closes.
+
+The issue report is prepared in
+[`docs/upstream-issue-config-snapshot-stale-ledger.md`](docs/upstream-issue-config-snapshot-stale-ledger.md)
+and is not yet filed (the available token lacks `Issues: write`); the code
+references it via `live_config::UPSTREAM_ISSUE_URL`.
 
 ---
 
