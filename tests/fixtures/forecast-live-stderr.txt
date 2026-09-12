@@ -1,0 +1,1 @@
+ℹ️  rent-forecast: live config from https://soroban-testnet.stellar.org — current ledger 4635349 (upstream `config snapshot` would report 3470630)
