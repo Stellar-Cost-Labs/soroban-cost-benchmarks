@@ -252,6 +252,10 @@ mod tests {
                 network: "testnet".to_string(),
                 config_timestamp: "2026-09-10T00:00:00Z".to_string(),
                 config_ledger: 1000,
+                config_source: "unit-test".to_string(),
+                effective_rent_rate_1kb: 1_267,
+                rate_basis: "unit-test".to_string(),
+                soroban_state_size_bytes: None,
                 entries: vec![RentForecastEntry {
                     tier: StorageTier::Persistent,
                     days: 30,
