@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 use soroban_cost_benchmarks::benchmark;
 use soroban_cost_benchmarks::compare;
+use soroban_cost_benchmarks::live_config;
 use soroban_cost_benchmarks::pr_comment;
 use soroban_cost_benchmarks::rent_forecast;
 use soroban_cost_benchmarks::wasm_metrics;
@@ -37,6 +38,15 @@ struct Cli {
     /// RPC URL override.
     #[arg(long, global = true)]
     rpc_url: Option<String>,
+
+    /// Permit placeholder (demo) rent rates when no live fetch or snapshot is
+    /// available.
+    ///
+    /// Off by default on purpose: every forecast must come from real network
+    /// data (live RPC fetch or --config-snapshot), so placeholder numbers can
+    /// never be mistaken for network-derived ones.
+    #[arg(long, global = true)]
+    allow_demo: bool,
 
     /// Verbose output.
     #[arg(short, long, global = true)]
@@ -107,6 +117,19 @@ enum Commands {
         output: Option<PathBuf>,
     },
 
+    /// Fetch `ConfigSetting*` ledger entries live and report their provenance.
+    ///
+    /// Reads the entries directly via `getLedgerEntries` and stamps the snapshot
+    /// with the network's current ledger from `getLatestLedger`. This is a
+    /// deliberate workaround for a known `soroban-cost-estimator` bug where
+    /// `config snapshot` reports a stale ledger; the tracking issue is printed
+    /// alongside the evidence.
+    LiveConfig {
+        /// Write the fetched config snapshot as JSON to this path.
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+    },
+
     /// Compare two cost snapshots for regression detection.
     Compare {
         /// Path to baseline snapshot.
@@ -155,6 +178,13 @@ enum Commands {
         /// Path to a comparison result JSON file.
         #[arg(long)]
         comparison: Option<PathBuf>,
+
+        /// Render the comment and print it, without calling the GitHub API.
+        ///
+        /// No token is required and nothing is posted — useful for reviewing
+        /// exactly what would be published.
+        #[arg(long)]
+        dry_run: bool,
     },
 
     /// Export rent forecast as JSON or CSV.
@@ -194,13 +224,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             cmd_rent_forecast(
                 &cli.network,
+                cli.rpc_url.as_deref(),
+                cli.allow_demo,
                 config_snapshot,
                 &entries,
                 horizons,
                 json,
                 csv,
                 output,
-            )?;
+            )
+            .await?;
         }
         Commands::WasmMetrics { wasm, json, output } => {
             cmd_wasm_metrics(&wasm, json, output)?;
@@ -211,7 +244,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             json,
             output,
         } => {
-            cmd_benchmark(&cli.network, config_snapshot, &entries, json, output)?;
+            cmd_benchmark(
+                &cli.network,
+                cli.rpc_url.as_deref(),
+                cli.allow_demo,
+                config_snapshot,
+                &entries,
+                json,
+                output,
+            )
+            .await?;
+        }
+        Commands::LiveConfig { out } => {
+            cmd_live_config(&cli.network, cli.rpc_url.as_deref(), out).await?;
         }
         Commands::Compare {
             baseline,
@@ -229,8 +274,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             forecast,
             wasm_metrics: wasm_path,
             comparison,
+            dry_run,
         } => {
-            cmd_pr_comment(&owner, &repo, pr_number, forecast, wasm_path, comparison).await?;
+            cmd_pr_comment(
+                &owner, &repo, pr_number, forecast, wasm_path, comparison, dry_run,
+            )
+            .await?;
         }
         Commands::Export {
             forecast,
@@ -244,8 +293,156 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn cmd_rent_forecast(
+/// Rent rates plus the provenance needed to label the resulting output.
+struct ConfigInput {
+    config: rent_forecast::RentConfig,
+    timestamp: String,
+    ledger: u32,
+    source: String,
+}
+
+/// Load rent rates from a snapshot file, a live RPC fetch, or — only when
+/// explicitly asked — demo placeholders.
+///
+/// Precedence: `--config-snapshot` > live fetch (default) > demo (`--allow-demo`).
+/// A failed live fetch is a hard error unless `--allow-demo` was passed, so the
+/// tool never silently downgrades to plausible-looking placeholder numbers.
+///
+/// The live path is a deliberate workaround for a known `soroban-cost-estimator`
+/// bug (see [`soroban_cost_benchmarks::live_config`]).
+async fn load_config(
     network: &str,
+    rpc_url: Option<&str>,
+    config_snapshot: Option<PathBuf>,
+    allow_demo: bool,
+    command: &str,
+) -> Result<ConfigInput, Box<dyn std::error::Error>> {
+    if let Some(path) = config_snapshot {
+        let data = std::fs::read_to_string(&path)?;
+        let snapshot: soroban_cost_estimator::config_snapshot::model::ConfigSnapshot =
+            serde_json::from_str(&data)?;
+        // A snapshot file has no LiveSorobanStateSizeWindow, so the state size
+        // is unknown and the rate falls back to the protocol's floor.
+        let config = rent_forecast::extract_rent_config(&snapshot, None)?;
+        return Ok(ConfigInput {
+            config,
+            timestamp: snapshot.timestamp.clone(),
+            ledger: snapshot.ledger,
+            source: format!("snapshot:{}", path.display()),
+        });
+    }
+
+    if !allow_demo {
+        match live_config::fetch_live_config(network, rpc_url).await {
+            Ok(live) => {
+                let config = rent_forecast::extract_rent_config(
+                    &live.snapshot,
+                    live.evidence.soroban_state_size_bytes,
+                )?;
+                eprintln!(
+                    "ℹ️  {command}: live config from {} — current ledger {} (upstream `config snapshot` would report {})",
+                    live.evidence.rpc_url,
+                    live.evidence.current_ledger,
+                    live.evidence.max_last_modified_ledger,
+                );
+                return Ok(ConfigInput {
+                    config,
+                    timestamp: live.snapshot.timestamp.clone(),
+                    ledger: live.snapshot.ledger,
+                    source: live.evidence.source_tag(),
+                });
+            }
+            Err(error) => {
+                return Err(format!(
+                    "live config fetch failed: {error}\n\
+                     Refusing to fall back to placeholder rates. Options:\n\
+                     \x20 --config-snapshot <file>  use a saved config snapshot\n\
+                     \x20 --allow-demo               use placeholder rates (output tagged as demo)\n\
+                     \x20 --rpc-url <url>            point at a different RPC endpoint"
+                )
+                .into());
+            }
+        }
+    }
+
+    eprintln!(
+        "⚠️  --allow-demo: using placeholder rent rates. These are NOT network data \
+         and must not be quoted as a real forecast."
+    );
+    Ok(ConfigInput {
+        config: demo_rent_config(),
+        timestamp: "demo-config".to_string(),
+        ledger: 0,
+        source: live_config::DEMO_CONFIG_SOURCE.to_string(),
+    })
+}
+
+/// Placeholder rates, used only when `--allow-demo` is passed explicitly.
+fn demo_rent_config() -> rent_forecast::RentConfig {
+    rent_forecast::RentConfig {
+        persistent_rent_rate_denominator: 4096,
+        temp_rent_rate_denominator: 4096,
+        // Flat 1267 stroops/1 KB curve: low == high, so interpolation is a
+        // no-op and `target` is irrelevant to the result.
+        rent_fee_1kb_low: 1_267,
+        rent_fee_1kb_high: 1_267,
+        rent_fee_growth_factor: 0,
+        state_target_size_bytes: 1,
+        soroban_state_size_bytes: Some(0),
+    }
+}
+
+/// `live-config` command: fetch `ConfigSetting*` entries and report provenance.
+async fn cmd_live_config(
+    network: &str,
+    rpc_url: Option<&str>,
+    out: Option<PathBuf>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let live = live_config::fetch_live_config(network, rpc_url).await?;
+
+    if let Some(path) = out {
+        let json = serde_json::to_string_pretty(&live.snapshot)?;
+        std::fs::write(&path, json)?;
+        println!("Snapshot written to: {}", path.display());
+    }
+
+    let config =
+        rent_forecast::extract_rent_config(&live.snapshot, live.evidence.soroban_state_size_bytes)?;
+    println!("{}", live_config::format_evidence(&live.evidence));
+    println!(
+        "\nEffective rent rate per 1 KB: {} stroops  [{}]",
+        rent_forecast::effective_rent_rate_1kb(&config),
+        rent_forecast::rate_basis(&config),
+    );
+    println!("\nRent rates extracted from this fetch:");
+    println!(
+        "  persistent_rent_rate_denominator: {}",
+        config.persistent_rent_rate_denominator
+    );
+    println!(
+        "  temp_rent_rate_denominator:       {}",
+        config.temp_rent_rate_denominator
+    );
+    println!(
+        "  rent_fee_1kb_low:                 {}",
+        config.rent_fee_1kb_low
+    );
+    println!(
+        "  rent_fee_1kb_high:                {}",
+        config.rent_fee_1kb_high
+    );
+    println!(
+        "  rent_fee_growth_factor:           {}",
+        config.rent_fee_growth_factor
+    );
+    println!("\nWorkaround for: {}", live_config::UPSTREAM_ISSUE_URL);
+    Ok(())
+}
+
+async fn cmd_rent_forecast(
+    network: &str,
+    rpc_url: Option<&str>,
+    allow_demo: bool,
     config_snapshot: Option<PathBuf>,
     entries: &[String],
     horizons: Option<Vec<u32>>,
@@ -266,43 +463,25 @@ fn cmd_rent_forecast(
             .collect::<Result<Vec<_>, _>>()?
     };
 
-    // Load or fetch config
-    if let Some(path) = config_snapshot {
-        let data = std::fs::read_to_string(&path)?;
-        let snapshot: soroban_cost_estimator::config_snapshot::model::ConfigSnapshot =
-            serde_json::from_str(&data)?;
-        let config = rent_forecast::extract_rent_config(&snapshot)?;
-        let forecast = rent_forecast::generate_forecast(
-            &config,
-            network,
-            &snapshot.timestamp,
-            snapshot.ledger,
-            &parsed_entries,
-            &horizons,
-        );
-        output_forecast(&forecast, json, csv, output)?;
-    } else {
-        eprintln!(
-            "⚠️  No config snapshot provided. Using demo config. \
-             For real forecasts, provide --config-snapshot or use soroban-cost-estimator to create one."
-        );
-        let demo_config = rent_forecast::RentConfig {
-            persistent_rent_rate_denominator: 4096,
-            temp_rent_rate_denominator: 4096,
-            rent_fee_1kb_low: 1_267,
-            rent_fee_1kb_high: 1_267,
-            rent_fee_growth_factor: 0,
-        };
-        let forecast = rent_forecast::generate_forecast(
-            &demo_config,
-            network,
-            "demo-config",
-            0,
-            &parsed_entries,
-            &horizons,
-        );
-        output_forecast(&forecast, json, csv, output)?;
-    }
+    let input = load_config(
+        network,
+        rpc_url,
+        config_snapshot,
+        allow_demo,
+        "rent-forecast",
+    )
+    .await?;
+
+    let forecast = rent_forecast::generate_forecast(
+        &input.config,
+        network,
+        &input.timestamp,
+        input.ledger,
+        &input.source,
+        &parsed_entries,
+        &horizons,
+    );
+    output_forecast(&forecast, json, csv, output)?;
 
     Ok(())
 }
@@ -352,8 +531,10 @@ fn cmd_wasm_metrics(
     Ok(())
 }
 
-fn cmd_benchmark(
+async fn cmd_benchmark(
     network: &str,
+    rpc_url: Option<&str>,
+    allow_demo: bool,
     config_snapshot: Option<PathBuf>,
     entries: &[String],
     json: bool,
@@ -373,21 +554,10 @@ fn cmd_benchmark(
         }]
     };
 
-    let config = if let Some(path) = config_snapshot {
-        let data = std::fs::read_to_string(&path)?;
-        let snapshot: soroban_cost_estimator::config_snapshot::model::ConfigSnapshot =
-            serde_json::from_str(&data)?;
-        rent_forecast::extract_rent_config(&snapshot)?
-    } else {
-        eprintln!("⚠️  No config snapshot provided. Using demo config.");
-        rent_forecast::RentConfig {
-            persistent_rent_rate_denominator: 4096,
-            temp_rent_rate_denominator: 4096,
-            rent_fee_1kb_low: 1_267,
-            rent_fee_1kb_high: 1_267,
-            rent_fee_growth_factor: 0,
-        }
-    };
+    let input = load_config(network, rpc_url, config_snapshot, allow_demo, "benchmark").await?;
+    let config = input.config;
+    let config_timestamp = input.timestamp;
+    let config_source = input.source;
 
     let horizons = vec![30, 180, 365];
     let results: Vec<benchmark::BenchmarkResult> = scenarios
@@ -413,7 +583,8 @@ fn cmd_benchmark(
 
     let report = benchmark::BenchmarkReport {
         network: network.to_string(),
-        config_timestamp: "demo".to_string(),
+        config_timestamp,
+        config_source,
         results,
         delta: None,
     };
@@ -470,9 +641,15 @@ async fn cmd_pr_comment(
     forecast_path: Option<PathBuf>,
     wasm_metrics_path: Option<PathBuf>,
     comparison_path: Option<PathBuf>,
+    dry_run: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let token = std::env::var("GITHUB_TOKEN")
-        .map_err(|_| "GITHUB_TOKEN environment variable is required")?;
+    let token = if dry_run {
+        // No API call is made, so no credential is needed.
+        String::new()
+    } else {
+        std::env::var("GITHUB_TOKEN")
+            .map_err(|_| "GITHUB_TOKEN environment variable is required")?
+    };
 
     let rent_forecast = if let Some(path) = forecast_path {
         let data = std::fs::read_to_string(&path)?;
@@ -501,6 +678,14 @@ async fn cmd_pr_comment(
         wasm_metrics: wasm,
         comparison,
     };
+
+    if dry_run {
+        eprintln!(
+            "[dry run] no GitHub API call made — printing the comment body that would be sent to {owner}/{repo}#{pr_number}"
+        );
+        println!("{}", pr_comment::render_comment_markdown(&summary));
+        return Ok(());
+    }
 
     let config = pr_comment::PrCommentConfig {
         owner: owner.to_string(),
