@@ -15,6 +15,7 @@ Captured: **2026-09-12**, between 08:00 and 08:05 UTC, against Stellar **testnet
 | `forecast-live-stderr.txt` / `forecast-demo-stderr.txt` | The stderr banners each run printed |
 | `pr-comment-rendered-body.md` | Comment body rendered from the live forecast — **rendered, never posted** |
 | `pr-comment-dry-run-stderr.txt` | The `[dry run]` banner, proving no API call was made |
+| `pr-comment-posted-body.md` | Comment body **actually posted** to a real PR, verbatim (§7) |
 
 Reproduce:
 
@@ -184,27 +185,109 @@ soroban-cost-benchmarks pr-comment \
 ```
 
 `--dry-run` prints the body and makes **no GitHub API call**, so it needs no
-token. This is a preview only. It is **not** evidence that the bot works, and it
-must not be reported as such.
+token. This remains a preview only. It is **not** evidence that the bot works —
+the live proof is the real API round-trip in §7.
 
 It did surface a real defect while being written: the table originally omitted
 entry size, so the two `Persistent` rows (1024 B and 2048 B) were
 indistinguishable. A `Size (B)` column was added and is now asserted in the unit
 test.
 
-## 7. Not yet verified
+## 7. The PR comment bot, proven live — 2026-09-13
 
-- **The PR comment bot has still never posted a real comment.** The Markdown
-  renderer and the update-in-place logic are unit-tested, and the body is
-  rendered above — but no GitHub API call has executed. This needs a token with
-  **`Issues: Write`** (PR conversation comments are issue comments) and
-  **`Pull requests: Write`**. The token available here has neither, which is the
-  same limitation that blocked issue creation.
-- **Update-in-place is unproven.** The marker-based find/update path
-  (`COMMENT_MARKER` → `list_comments` → `update_comment`) has never run against
-  the API. Until a second push is observed editing the existing comment rather
-  than adding a duplicate, treat the bot as unverified.
+This supersedes the earlier "unproven at the API layer" note. Everything below
+is real captured output, from a real PR, against
+`aigbagbobila/soroban-cost-benchmarks`.
+
+### 7.1 A real defect, found and fixed
+
+The first live call panicked before any HTTP request was sent:
+
+```
+thread 'main' panicked at .../rustls-0.23.44/src/crypto/mod.rs:249:14:
+Could not automatically determine the process-level CryptoProvider from Rustls
+crate features.
+```
+
+Cause: `octocrab`'s default features enable `rustls-ring`, while
+`soroban-cost-estimator`'s `reqwest` enables `rustls` with `aws-lc-rs`. With
+**two** providers in the graph, rustls 0.23 refuses to pick a process-level
+default. `reqwest` was unaffected because it builds its TLS config with an
+explicit provider; `octocrab` relies on the process default. Fixed in
+`Cargo.toml` by selecting `rustls-aws-lc-rs` for `octocrab` (restating its other
+defaults), leaving exactly one provider compiled in. Verified:
+`cargo tree -e features -i rustls` now shows `aws-lc-rs` only, with no `ring`
+feature, and `ring` no longer appears under `rustls` at all.
+
+This is exactly why the unit tests could not catch it: they never open a socket.
+
+### 7.2 The round-trip
+
+```
+$ git push -u origin test/pr-comment-bot-live
+remote: This repository moved. Please use the new location:
+remote:   https://github.com/aigbagbobila/soroban-cost-benchmarks.git
+
+$ gh pr create --repo aigbagbobila/soroban-cost-benchmarks \
+    --base master --head test/pr-comment-bot-live --title "throwaway: live pr-comment bot verification"
+https://github.com/aigbagbobila/soroban-cost-benchmarks/pull/1
+
+# RUN 1 — first post
+$ soroban-cost-benchmarks pr-comment --owner aigbagbobila \
+    --repo soroban-cost-benchmarks --pr-number 1 \
+    --forecast /tmp/forecast-live-pr-test.json
+Comment posted/updated: ID 5652127269
+
+$ gh api repos/aigbagbobila/soroban-cost-benchmarks/issues/1/comments \
+    --jq '.[] | {id, created_at, updated_at}'
+{"created_at":"2026-09-13T08:08:27Z","has_marker":true,"id":5652127269,"updated_at":"2026-09-13T08:08:27Z","user":"aigbagbobila"}
+
+# second commit pushed to the same branch, then RUN 2
+$ soroban-cost-benchmarks pr-comment ... --pr-number 1
+Comment posted/updated: ID 5652127269
+
+$ gh api .../issues/1/comments --jq '{count: length, comments: [...]}'
+{"count":1,"comments":[{"created_at":"2026-09-13T08:08:27Z","id":5652127269,"updated_at":"2026-09-13T08:08:37Z"}]}
+```
+
+Both runs return the **same** comment ID (`5652127269`). `created_at` is
+unchanged, `updated_at` advanced, and the comment count stays at **1** — so the
+second run edited the existing comment rather than posting a duplicate.
+Update-in-place is proven, not inferred.
+
+The exact posted body is preserved verbatim in `pr-comment-posted-body.md`. It
+was generated from a fresh live fetch (testnet ledger `4652629`); note the tool
+requires an explicit `--forecast` path and does not fetch live config by itself.
+
+### 7.3 Permission result — measured, not inferred
+
+The earlier review flagged `Pull requests: Write` as inferred. It is now
+measured:
+
+- `gh pr create` succeeded → **`Pull requests: write` works**.
+- Comment create **and** update succeeded → **`Issues: write` works here**.
+
+Both are **per-repository on the installation**, not token-wide. The same token
+returns `HTTP 403: Resource not accessible by integration` for label/issue
+writes on `Stellar-Cost-Labs/soroban-cost-estimator`:
+
+```
+$ gh label create "__perm-probe" --repo Stellar-Cost-Labs/soroban-cost-estimator
+HTTP 403: Resource not accessible by integration (https://api.github.com/repos/Stellar-Cost-Labs/soroban-cost-estimator/labels)
+```
+
+Cleanup: PR #1 closed (`state: CLOSED`, `closedAt: 2026-09-13T08:08:44Z`), branch
+`test/pr-comment-bot-live` deleted, and the throwaway file removed — `git branch
+-a` shows only `master`.
+
+## 8. Still not verified
+
 - The `wasm_metrics` and `comparison` sections of the comment are exercised only
   by unit tests with synthetic data — no real WASM file or comparison has been
-  fed through.
-- The upstream issue is prepared but unfiled (see §1).
+  fed through a live post.
+- The upstream issue is prepared but still unfiled (see §1): the token lacks
+  `Issues: write` on the sibling repository, and that is a permission the
+  repository owner must grant.
+- The bot has only ever been exercised against a PR with no repository ruleset
+  in force; whether a required-status-check ruleset interacts with it is
+  untested.
