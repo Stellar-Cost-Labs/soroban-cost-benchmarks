@@ -20,7 +20,7 @@ GitHub App permission grants**, described in §1.
 | 3 | PR comment bot proven live | **Done and proven** (§2) |
 | 4 | Org transfer | **Deferred by maintainer** (deliberate, not blocked) |
 | 4 | `origin` remote corrected | **Done** (§4.1) |
-| 4 | Branch-name mismatch (`main` vs `master`) | **Half-done** — needs one UI click (§4.2) |
+| 4 | Branch-name mismatch (`main` vs `master`) | **One click from done** — remote `master` undeletable until the default moves (§4.2) |
 | 4 | Branch protection / ruleset | **Blocked** — `403` (§4.3) |
 | 5 | Description + topics | **Blocked** — `403` (§5) |
 | 6 | Drips-shaped issue backlog | **Done** — 7 issues (§6) |
@@ -216,18 +216,38 @@ remote:   https://github.com/aigbagbobila/soroban-cost-benchmarks.git
 `origin` now points at the canonical URL. This removes the crutch of GitHub's
 rename redirect.
 
-### 4.2 Branch-name mismatch — half-resolved
+### 4.2 Branch-name mismatch — one click from resolved
 
 The prompt targets `main`; the actual default is (still) `master`; CI triggers on
-`[main, master]`. The maintainer chose **rename to `main`**.
+`[main, master]`. The maintainer chose **rename to `main`**, and asked for
+`master` to be deleted outright.
 
-`main` now exists and is byte-identical to `master`. But repointing the *default*
-branch requires `Administration: write`, which is `403`. So the rename is one
-UI click from complete (Settings → General → Default branch → `main`).
+`main` exists and is byte-identical to `master`. The local checkout now tracks
+`main`, and the local `master` and leftover `test/pr-comment-bot-live` branches
+have been deleted, so the working copy has a single branch.
+
+The remote `master`, however, **cannot** be deleted while it is the default
+branch — GitHub rejects it before permissions are even consulted:
+
+```
+$ git push origin --delete master
+ ! [remote rejected] master (refusing to delete the current branch: refs/heads/master)
+```
+
+And repointing the default is itself blocked, because it needs
+`Administration: write`:
+
+```
+$ gh api -X PATCH repos/… -f default_branch=main
+{"message":"Resource not accessible by integration", … "status":403}
+```
+
+So the remaining step is one UI click — Settings → General → Default branch →
+`main` — after which `master` can be deleted.
 
 The CI trigger list was **deliberately not narrowed** to `[main]`: `master` is
 still the default, so trimming it now would stop CI firing on the branch people
-actually push to. Narrow the triggers only once the default has moved.
+actually push to. Narrow the triggers once the default has moved.
 
 ### 4.3 Ruleset / protection — blocked
 
@@ -300,10 +320,12 @@ a browser displays):
 - **#7** — Labels: `Stellar Wave`, `complexity: high (200 pts)`, `testing`; Status: Open
 - **#8** — Labels: `Stellar Wave`, `ci/cd`, `complexity: trivial (100 pts)`; Status: Open
 
-**Subsequent change (maintainer request):** the `Stellar Wave` and
-`complexity: *` labels were then **removed from all seven issues**. They now
-carry only their type label (`bug` / `enhancement` / `testing` / `ci/cd`). The
-label *definitions* still exist on the repository and can be reused later.
+**Subsequent change (maintainer request):** labels were then **removed from all
+seven issues** — first `Stellar Wave` and `complexity: *`, then the type labels
+(`bug` / `enhancement` / `testing` / `ci/cd`). Every issue now has an empty label
+set, so the table above records the labels used at creation time, not the current
+state. The label *definitions* still exist on the repository and can be reused
+later.
 
 ---
 
@@ -352,8 +374,8 @@ An honest list, in the spirit of the review's §9:
   status checks.
 - **Default branch, description and topics are unset/unchanged** — all three need
   `Administration: write`.
-- **`main` and `master` are duplicated.** Whichever becomes default, the other
-  should be deleted afterwards.
+- **Remote `main` and `master` are duplicated.** `master` cannot be deleted
+  until the default branch is moved to `main` (§4.2).
 - **The bot's `wasm_metrics` and `comparison` sections have only ever rendered
   from synthetic unit-test data** — no real WASM file or comparison has been fed
   through a live post. The live test exercised the rent-forecast path only.
@@ -366,8 +388,8 @@ An honest list, in the spirit of the review's §9:
 ## 10. What is needed to finish
 
 1. **Grant `Administration: write`** to the App installation. This single change
-   unblocks: flipping the default branch to `main`, creating the ruleset,
-   setting the description and topics, and the transfer itself.
+   unblocks: flipping the default branch to `main`, deleting `master`, creating
+   the ruleset, setting the description and topics, and the transfer itself.
 2. **Grant `Issues: write` on `Stellar-Cost-Labs/soroban-cost-estimator`** (or
    file the prepared issue by hand). This unblocks §3 and clears every
    `PLACEHOLDER`.
@@ -386,8 +408,8 @@ work — only on those two grants.
 - [ ] Upstream issue filed, `PLACEHOLDER` gone → **blocked** (`403 createIssue`) (§3)
 - [x] PR bot proven live: real post, real ID, real update-in-place, throwaway PR closed, branch deleted (§2)
 - [ ] Repo transferred with `origin` updated → **deferred by maintainer**; `origin` corrected (§4.1, §4.4)
-- [ ] `main`/`master` mismatch resolved → **half-done**, needs one UI click (§4.2)
+- [ ] `main`/`master` mismatch resolved and `master` deleted → **local side done** (checkout on `main`; local `master` and throwaway branch removed); remote `master` persists and needs one settings click (§4.2)
 - [ ] Fresh ruleset, verified by push-and-revert → **blocked** (`403`), and coupled to the deferred transfer (§4.3)
 - [ ] Topics and description set → **blocked** (`403`) and gated on transfer (§5)
-- [x] 5–10 real issues with sibling-matching labels; two quoted from the rendered page (§6)
+- [x] 5–10 real issues created with sibling-matching labels, two quoted from the rendered page; all labels later removed at maintainer request (§6)
 - [x] Honesty check: consistent story, explicit limitations, a plain verdict (§9)
