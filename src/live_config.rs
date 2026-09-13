@@ -51,10 +51,14 @@ use crate::error::{BenchError, BenchResult};
 /// This workaround exists only to route around that issue; delete it once the
 /// issue is closed.
 ///
-/// **Not yet filed.** The full report is prepared in
-/// `docs/upstream-issue-config-snapshot-stale-ledger.md`, but the GitHub token
-/// available in this environment lacks `Issues: write`, so `createIssue` is
-/// rejected. Replace `PLACEHOLDER` with the real number once it is filed.
+/// **Not yet filed** — re-verified 2026-09-13. The full report is prepared in
+/// `docs/upstream-issue-config-snapshot-stale-ledger.md`. Filing fails with
+/// `GraphQL: Resource not accessible by integration (createIssue)`: the GitHub
+/// App installation behind the available token has `Issues: write` on this
+/// repository but **not** on `Stellar-Cost-Labs/soroban-cost-estimator`. The
+/// permission is per-installation, not token-wide, so there is no command-line
+/// workaround — the app must be granted `Issues: write` on that repository.
+/// Replace `PLACEHOLDER` with the real number once it is filed.
 pub const UPSTREAM_ISSUE_URL: &str =
     "https://github.com/Stellar-Cost-Labs/soroban-cost-estimator/issues/PLACEHOLDER";
 
