@@ -17,6 +17,11 @@ Captured: **2026-09-12**, between 08:00 and 08:05 UTC, against Stellar **testnet
 | `pr-comment-dry-run-stderr.txt` | The `[dry run]` banner, proving no API call was made |
 | `pr-comment-posted-body.md` | Comment body **actually posted** to a real PR, verbatim (§7) |
 
+`live-config-evidence.txt` is a verbatim capture from **before** the upstream
+issue was filed, so its final line still prints the tracking URL as
+`.../issues/PLACEHOLDER`. It is preserved rather than back-edited, because
+editing a capture would make it fiction. The real issue number is **#267** (§1).
+
 Reproduce:
 
 ```bash
@@ -55,9 +60,10 @@ CONFIG_SETTING_STATE_ARCHIVAL                        last modified @ 2332
 
 `3470630` is exactly the value in the original report, which is the point:
 config settings only change on governance events, so this number is frozen
-between upgrades. The issue is prepared in
-[`docs/upstream-issue-config-snapshot-stale-ledger.md`](../../docs/upstream-issue-config-snapshot-stale-ledger.md)
-and is **not yet filed** — the available GitHub token lacks `Issues: write`.
+between upgrades. The issue is tracked as
+[`Stellar-Cost-Labs/soroban-cost-estimator#267`](https://github.com/Stellar-Cost-Labs/soroban-cost-estimator/issues/267)
+— opened 2026-09-13, still open as of 2026-09-14. The full report lives in
+[`docs/upstream-issue-config-snapshot-stale-ledger.md`](../../docs/upstream-issue-config-snapshot-stale-ledger.md).
 
 ## 2. Three-way independent cross-check of the workaround
 
@@ -285,9 +291,8 @@ Cleanup: PR #1 closed (`state: CLOSED`, `closedAt: 2026-09-13T08:08:44Z`), branc
 - The `wasm_metrics` and `comparison` sections of the comment are exercised only
   by unit tests with synthetic data — no real WASM file or comparison has been
   fed through a live post.
-- The upstream issue is prepared but still unfiled (see §1): the token lacks
-  `Issues: write` on the sibling repository, and that is a permission the
-  repository owner must grant.
+- The upstream issue (#267, see §1) is **filed but still open**. The `live-config`
+  workaround therefore stays until it closes; it is deleted, not deprecated.
 - The bot has only ever been exercised against a PR with no repository ruleset
   in force; whether a required-status-check ruleset interacts with it is
   untested.

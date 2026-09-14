@@ -51,16 +51,15 @@ use crate::error::{BenchError, BenchResult};
 /// This workaround exists only to route around that issue; delete it once the
 /// issue is closed.
 ///
-/// **Not yet filed** — re-verified 2026-09-13. The full report is prepared in
-/// `docs/upstream-issue-config-snapshot-stale-ledger.md`. Filing fails with
-/// `GraphQL: Resource not accessible by integration (createIssue)`: the GitHub
-/// App installation behind the available token has `Issues: write` on this
-/// repository but **not** on `Stellar-Cost-Labs/soroban-cost-estimator`. The
-/// permission is per-installation, not token-wide, so there is no command-line
-/// workaround — the app must be granted `Issues: write` on that repository.
-/// Replace `PLACEHOLDER` with the real number once it is filed.
+/// **Filed 2026-09-13 as issue #267** and open as of 2026-09-14. The full report
+/// is kept in `docs/upstream-issue-config-snapshot-stale-ledger.md`. The issue
+/// had to be opened by hand: automated filing returns
+/// `GraphQL: Resource not accessible by integration (createIssue)`, because the
+/// GitHub App installation behind the available token holds `Issues: write` on
+/// this repository but **not** on `Stellar-Cost-Labs/soroban-cost-estimator` —
+/// a per-installation grant, not a token-wide one.
 pub const UPSTREAM_ISSUE_URL: &str =
-    "https://github.com/Stellar-Cost-Labs/soroban-cost-estimator/issues/PLACEHOLDER";
+    "https://github.com/Stellar-Cost-Labs/soroban-cost-estimator/issues/267";
 
 /// Human-readable tag recorded on forecasts produced from a live fetch.
 pub const LIVE_CONFIG_SOURCE_PREFIX: &str = "rpc:getLedgerEntries";

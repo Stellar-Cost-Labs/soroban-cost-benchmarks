@@ -1,21 +1,30 @@
 # Upstream issue: `config snapshot` reports a stale ledger
 
-**Status: prepared, NOT YET FILED.**
+**Status: FILED.** → [Stellar-Cost-Labs/soroban-cost-estimator#267](https://github.com/Stellar-Cost-Labs/soroban-cost-estimator/issues/267)
 
-Filing from this environment failed:
+Opened **2026-09-13**, still **open** as of 2026-09-14, with labels `bug`,
+`complexity: trivial`, `Stellar Wave`.
+
+The issue had to be opened by hand, because filing from this environment failed:
 
 ```
 $ gh issue create --repo Stellar-Cost-Labs/soroban-cost-estimator ...
 GraphQL: Resource not accessible by integration (createIssue)
 ```
 
-The GitHub App token in use has `Issues: write` withheld, so it cannot create
-issues in the sibling repo (or in this one). Read access — including the
-`permissions` block and issue/label listings — works fine.
+The GitHub App token in use has `Issues: write` withheld on the sibling repo, so
+it cannot create issues there. The permission is per-installation rather than
+token-wide: the same credential *can* write issues on
+`aigbagbobila/soroban-cost-benchmarks`. Read access — including the `permissions`
+block and issue/label listings — works fine on both.
 
-Once the token has `Issues: write` (or a maintainer files it by hand), run the
-command at the bottom of this file and replace `PLACEHOLDER` in
-`src/live_config.rs::UPSTREAM_ISSUE_URL` with the returned issue number.
+Known defect in the filed copy: the pasted body still carries this file's
+front matter, including the stale ``**Status: prepared, NOT YET FILED.**``
+header and the filing-instructions block below. Editing the issue needs
+`Issues: write` on the sibling repo, which this environment does not have. The
+canonical, corrected report is the body between the `---` markers below.
+
+`src/live_config.rs::UPSTREAM_ISSUE_URL` now points at the real issue.
 
 ## Title
 
@@ -110,7 +119,9 @@ curl -s "https://horizon-testnet.stellar.org/ledgers?order=desc&limit=1" | jq '.
 
 ---
 
-## Command to file it
+## Command that was used to file it
+
+Kept for the record; **already run on 2026-09-13**, producing issue #267.
 
 ```bash
 gh issue create \
@@ -120,5 +131,6 @@ gh issue create \
   --body-file docs/upstream-issue-config-snapshot-stale-ledger.md
 ```
 
-(The body above is preceded by this file's own front matter, so prefer copying
-the section between the `---` markers, or let a maintainer paste it directly.)
+The pasted body was preceded by this file's own front matter — which is why the
+live issue carries a stale "NOT YET FILED" header. When re-filing or editing for
+any reason, copy only the section between the `---` markers.
