@@ -601,11 +601,13 @@ Not yet published — `cargo install soroban-cost-benchmarks` will fail with
 
 ## Contributing
 
-Contributions are welcome. [`CONTRIBUTING.md`](CONTRIBUTING.md) covers the workflow,
-conventional commits, and the clippy policy.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for details on coding standards, PR process,
+and project structure.
 
-There are **seven open issues**, all written as scoped, claimable work following the
-sibling repository's issue shape:
+Looking for something to work on? The
+[issue backlog](https://github.com/aigbagbobila/soroban-cost-benchmarks/issues) holds
+scoped issues with Summary / Acceptance criteria / Implementation hints — good first
+tasks for the Drips Stellar Wave contributor sprints.
 
 | # | Title |
 |---|---|
