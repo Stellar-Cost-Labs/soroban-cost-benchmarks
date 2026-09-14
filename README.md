@@ -8,12 +8,17 @@
   </a>
   <img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue" alt="License: MIT OR Apache-2.0"/>
   <img src="https://img.shields.io/badge/rust-1.85%2B-blue" alt="Rust 1.85+"/>
+  <a href="https://soroban-cost-estimator.gitbook.io/soroban-cost_benchmarks">
+    <img src="https://img.shields.io/badge/docs-GitBook-3884FF" alt="Docs"/>
+  </a>
   <a href="https://github.com/Stellar-Cost-Labs/soroban-cost-estimator/issues/267">
     <img src="https://img.shields.io/badge/upstream%20bug-%23267-B60205" alt="Upstream bug #267"/>
   </a>
 </p>
 
 # soroban-cost-benchmarks
+
+[📚 Documentation](https://soroban-cost-estimator.gitbook.io/soroban-cost_benchmarks)
 
 **Storage-rent forecasting, WASM metrics, and an inline PR cost comment bot** — built on
 [`soroban-cost-estimator`](https://github.com/Stellar-Cost-Labs/soroban-cost-estimator).
