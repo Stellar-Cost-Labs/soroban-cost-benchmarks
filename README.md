@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/logo.svg" alt="soroban-cost-benchmarks" width="820"/>
+  <img src="./assets/banner.jpeg" alt="soroban-cost-benchmarks" width="820"/>
 </p>
 
 <p align="center">
@@ -344,7 +344,9 @@ soroban-cost-benchmarks
 │   ├── pr_comment.rs       # GitHub PR comment bot (update-in-place)
 │   ├── error.rs            # Error types
 │   └── main.rs             # CLI binary
-├── assets/logo.svg         # Banner
+├── assets/                 # Banner and logo images
+│   ├── banner.jpeg         #   README banner
+│   └── logo.svg            #   Vector logo (no longer referenced by the README)
 ├── docs/                   # Documentation (and the upstream issue report)
 ├── tests/fixtures/         # Captured real evidence (see its README)
 └── .github/workflows/ci.yml
@@ -591,6 +593,11 @@ Not yet published — `cargo install soroban-cost-benchmarks` will fail with
 ## Topics
 
 `stellar` · `soroban` · `rust` · `ci-cd` · `cost-analysis` · `github-actions`
+
+## Socials
+
+- [Telegram](https://t.me/+O3iICQDcZEViM2Nk)
+- [Discord](https://discord.com/invite/KSatPckM2)
 
 ## Contributing
 
