@@ -1,0 +1,36 @@
+# GitBook site configuration for site-wide Git Sync.
+#
+# Schema: https://api.gitbook.com/gitbook-docs.yaml
+#
+# This file lives at the repository root, which is the site's Git Sync
+# "Project directory" (left empty -> GitBook uses the repository root).
+# Content directories below are therefore resolved from the repository root,
+# so "./docs" reads this repository's docs/ directory.
+#
+# Keys are the stable identifiers GitBook uses to match a node from one sync
+# to the next. Treat them as permanent: changing a key replaces that space
+# with a new one and detaches the original. Renaming is done by editing the
+# title, and changing the URL by editing the path -- never the key.
+$schema: https://api.gitbook.com/gitbook-docs.yaml
+
+site:
+  title: soroban-cost-benchmarks
+  structure:
+    # This repository has exactly one documentation directory, `docs/`, so it
+    # maps to a single space. There is therefore no section (a section exists
+    # to gather several spaces under one navigation entry), and the one
+    # top-level space carries `default: true`.
+    #
+    # `docs/` is read as one book: its 19 pages and their order come from
+    # docs/SUMMARY.md. The nested directories docs/concepts/ and
+    # docs/commands/ are page groups inside that same space, not spaces of
+    # their own -- if they were separate spaces the same files would be
+    # imported twice, and the `../` cross-links between them would no longer
+    # resolve.
+    - type: space
+      key: space-docs
+      title: Documentation
+      path: docs
+      default: true
+      content:
+        directory: ./docs
