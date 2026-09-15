@@ -202,8 +202,9 @@ test.
 ## 7. The PR comment bot, proven live — 2026-09-13
 
 This supersedes the earlier "unproven at the API layer" note. Everything below
-is real captured output, from a real PR, against
-`aigbagbobila/soroban-cost-benchmarks`.
+is real captured output from a real PR. §7.1–7.3 were captured pre-transfer on
+`aigbagbobila/soroban-cost-benchmarks`; §7.4 is a post-transfer re-run on
+`Stellar-Cost-Labs/soroban-cost-benchmarks` with `Main_ruleset` in force.
 
 ### 7.1 A real defect, found and fixed
 
@@ -286,6 +287,74 @@ Cleanup: PR #1 closed (`state: CLOSED`, `closedAt: 2026-09-13T08:08:44Z`), branc
 `test/pr-comment-bot-live` deleted, and the throwaway file removed — `git branch
 -a` shows only `master`.
 
+### 7.4 Re-run against a ruleset-protected PR — 2026-09-15
+
+§7.1–7.3 were captured on the pre-transfer path, before `Main_ruleset` existed.
+This subsection closes the gap §8 used to flag: the same round-trip, re-run
+post-transfer on the org repo with the ruleset active. Nothing here is copied
+from the earlier run — these numbers and IDs are from this run only.
+
+Throwaway PR:
+[`Stellar-Cost-Labs/soroban-cost-benchmarks#10`](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/pull/10)
+(`--base main --head test/pr-bot-ruleset-proof`). Forecast is live, no demo
+fallback:
+
+```
+config_source:    rpc:getLedgerEntries@4686696 (testnet)
+config_ledger:    4686696
+rate_basis:       interpolated (state 2635217058 < target 4000000000)
+config_timestamp: 2026-09-15T07:24:32Z
+```
+
+The upstream `config snapshot` command would still have stamped ledger
+`3470630` here (§1), so the workaround was still doing its job.
+
+RUN 1 — first post, on the PR's initial commit:
+
+```
+$ export GITHUB_TOKEN=...
+$ soroban-cost-benchmarks pr-comment --owner Stellar-Cost-Labs \
+    --repo soroban-cost-benchmarks --pr-number 10 \
+    --forecast pr-bot-forecast.json
+Comment posted/updated: ID 5676402650
+
+$ gh api repos/Stellar-Cost-Labs/soroban-cost-benchmarks/issues/10/comments \
+    --jq '.[] | {id, created_at, updated_at, user: .user.login, has_marker: (.body | contains("soroban-cost-benchmarks bot"))}'
+{"created_at":"2026-09-15T07:24:37Z","has_marker":true,"id":5676402650,"updated_at":"2026-09-15T07:24:37Z","user":"aigbagbobila"}
+```
+
+A second commit was pushed to the same branch, then RUN 2:
+
+```
+$ soroban-cost-benchmarks pr-comment ... --pr-number 10
+Comment posted/updated: ID 5676402650
+
+$ gh api .../issues/10/comments --jq '{count: length, comments: [.[] | {id, created_at, updated_at}]}'
+{"count":1,"comments":[{"created_at":"2026-09-15T07:24:37Z","id":5676402650,"updated_at":"2026-09-15T07:24:51Z"}]}
+```
+
+Same comment ID both runs, `created_at` unchanged, `updated_at` advanced,
+count stayed at **1** — update-in-place holds on the org repo too.
+
+What makes this the ruleset case: throughout both runs the PR was subject to
+`Main_ruleset`, which requires the four CI checks and one approving review.
+Checked right after RUN 2, GitHub reported:
+
+```
+{"mergeStateStatus":"BLOCKED","reviewDecision":"REVIEW_REQUIRED",
+ "checks":[{"name":"Formatting","status":"QUEUED"},
+           {"name":"Clippy","status":"QUEUED"},
+           {"name":"Tests","status":"QUEUED"}]}
+```
+
+(`Build` is gated on the other three, so it had not started yet.) So the bot
+created and edited its comment on a PR that was blocked pending the required
+checks and review — the ruleset does not prevent it.
+
+Cleanup: PR #10 closed without merging (`state: CLOSED`, `closedAt:
+2026-09-15T07:25:04Z`), branch `test/pr-bot-ruleset-proof` deleted, and the
+throwaway commit never reached `main`.
+
 ## 8. Still not verified
 
 - The `wasm_metrics` and `comparison` sections of the comment are exercised only
@@ -293,6 +362,8 @@ Cleanup: PR #1 closed (`state: CLOSED`, `closedAt: 2026-09-13T08:08:44Z`), branc
   fed through a live post.
 - The upstream issue (#267, see §1) is **filed but still open**. The `live-config`
   workaround therefore stays until it closes; it is deleted, not deprecated.
-- The bot has only ever been exercised against a PR with no repository ruleset
-  in force; whether a required-status-check ruleset interacts with it is
-  untested.
+- **Answered (§7.4) — the ruleset case.** The bot has now been exercised
+  against a PR with `Main_ruleset` in force: the PR read
+  `reviewDecision: REVIEW_REQUIRED` and `mergeStateStatus: BLOCKED` with the
+  required checks queued, and the comment was still created and then updated in
+  place. The ruleset does not interfere with comment posting.
