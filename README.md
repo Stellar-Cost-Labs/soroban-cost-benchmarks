@@ -3,16 +3,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/aigbagbobila/soroban-cost-benchmarks/actions/workflows/ci.yml">
-    <img src="https://github.com/aigbagbobila/soroban-cost-benchmarks/actions/workflows/ci.yml/badge.svg" alt="CI"/>
+  <a href="https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/actions/workflows/ci.yml">
+    <img src="https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/actions/workflows/ci.yml/badge.svg" alt="CI"/>
   </a>
   <img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue" alt="License: MIT OR Apache-2.0"/>
   <img src="https://img.shields.io/badge/rust-1.85%2B-blue" alt="Rust 1.85+"/>
   <a href="https://soroban-cost-estimator.gitbook.io/soroban-cost_benchmarks">
     <img src="https://img.shields.io/badge/docs-GitBook-3884FF" alt="Docs"/>
-  </a>
-  <a href="https://github.com/Stellar-Cost-Labs/soroban-cost-estimator/issues/267">
-    <img src="https://img.shields.io/badge/upstream%20bug-%23267-B60205" alt="Upstream bug #267"/>
   </a>
 </p>
 
@@ -25,25 +22,6 @@
 
 > ⚠️ This is unaudited developer tooling. Always verify fee estimates against your
 > target network before mainnet deployment.
-
----
-
-## Where this repository lives
-
-This project currently lives under a **personal account**:
-[`aigbagbobila/soroban-cost-benchmarks`](https://github.com/aigbagbobila/soroban-cost-benchmarks).
-A transfer to the [`Stellar-Cost-Labs`](https://github.com/Stellar-Cost-Labs) org is
-planned, but **has not happened** — `Stellar-Cost-Labs/soroban-cost-benchmarks` does
-not exist yet (GitHub returns 404), and the maintainer deferred the transfer until the
-documentation is finished.
-
-Some metadata already points at the *planned* org URL — `Cargo.toml`'s `repository`
-field and the footer of every generated PR comment both say `Stellar-Cost-Labs`. Treat
-those as intentions, not as the current canonical location. The working `git remote`
-is correct: it points at the personal account.
-
-There is **no organizational relationship** with any tool named in the comparison
-below, and none is implied.
 
 ---
 
@@ -95,7 +73,7 @@ minimal.
 Not published on crates.io yet, so install from source:
 
 ```bash
-git clone https://github.com/aigbagbobila/soroban-cost-benchmarks
+git clone https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks
 cd soroban-cost-benchmarks
 cargo install --path .
 ```
@@ -479,7 +457,7 @@ Read this before quoting any number.
   Nothing here replaces `simulateTransaction`.
 - **`Cargo.lock` is gitignored** even though this is a binary crate, so builds are not
   pinned to the dependency versions the captured evidence was produced with. Tracked as
-  open decision [#8](https://github.com/aigbagbobila/soroban-cost-benchmarks/issues/8),
+  open decision [#8](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/issues/8),
   not yet resolved.
 - **`benchmark` reports rent only.** Its resource fields (`cpu_instructions`,
   `memory_bytes`, read/write entries and bytes, tx size) are hardcoded to `0`. Do not
@@ -578,7 +556,7 @@ Override with `--rpc-url`.
 ### From source
 
 ```bash
-git clone https://github.com/aigbagbobila/soroban-cost-benchmarks
+git clone https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks
 cd soroban-cost-benchmarks
 cargo install --path .
 ```
@@ -592,7 +570,7 @@ Not yet published — `cargo install soroban-cost-benchmarks` will fail with
 
 ## Topics
 
-`stellar` · `soroban` · `rust` · `ci-cd` · `cost-analysis` · `github-actions`
+`cli` · `developer-tooling` · `gas-estimation` · `soroban` · `stellar`
 
 ## Socials
 
@@ -605,19 +583,19 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for details on coding standards, PR pro
 and project structure.
 
 Looking for something to work on? The
-[issue backlog](https://github.com/aigbagbobila/soroban-cost-benchmarks/issues) holds
+[issue backlog](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/issues) holds
 scoped issues with Summary / Acceptance criteria / Implementation hints — good first
 tasks for the Drips Stellar Wave contributor sprints.
 
 | # | Title |
 |---|---|
-| [#2](https://github.com/aigbagbobila/soroban-cost-benchmarks/issues/2) | `feat(rent)`: model Instance storage explicitly instead of reusing the Persistent denominator |
-| [#3](https://github.com/aigbagbobila/soroban-cost-benchmarks/issues/3) | `fix(config)`: fetch `LiveSorobanStateSizeWindow` for the `--config-snapshot` path too |
-| [#4](https://github.com/aigbagbobila/soroban-cost-benchmarks/issues/4) | `feat(compare)`: per-tier regression thresholds instead of one global percentage |
-| [#5](https://github.com/aigbagbobila/soroban-cost-benchmarks/issues/5) | `fix(export)`: handle empty entry lists, unicode paths, and large horizon sets |
-| [#6](https://github.com/aigbagbobila/soroban-cost-benchmarks/issues/6) | `feat(benchmark)`: expand the suite beyond the four standard scenarios |
-| [#7](https://github.com/aigbagbobila/soroban-cost-benchmarks/issues/7) | `test(live-config)`: assert the live fetch's ledger matches Horizon |
-| [#8](https://github.com/aigbagbobila/soroban-cost-benchmarks/issues/8) | `chore`: decide whether to track `Cargo.lock` |
+| [#2](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/issues/2) | `feat(rent)`: model Instance storage explicitly instead of reusing the Persistent denominator |
+| [#3](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/issues/3) | `fix(config)`: fetch `LiveSorobanStateSizeWindow` for the `--config-snapshot` path too |
+| [#4](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/issues/4) | `feat(compare)`: per-tier regression thresholds instead of one global percentage |
+| [#5](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/issues/5) | `fix(export)`: handle empty entry lists, unicode paths, and large horizon sets |
+| [#6](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/issues/6) | `feat(benchmark)`: expand the suite beyond the four standard scenarios |
+| [#7](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/issues/7) | `test(live-config)`: assert the live fetch's ledger matches Horizon |
+| [#8](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/issues/8) | `chore`: decide whether to track `Cargo.lock` |
 
 Contributions go through pull requests — `main` requires the four CI checks to pass.
 
@@ -625,7 +603,7 @@ Contributions go through pull requests — `main` requires the four CI checks to
 
 | Role | Who | Contact |
 |---|---|---|
-| Maintainer | [@aigbagbobila](https://github.com/aigbagbobila) | [open an issue](https://github.com/aigbagbobila/soroban-cost-benchmarks/issues) |
+| Maintainer | [@aigbagbobila](https://github.com/aigbagbobila) | [open an issue](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/issues) |
 | Security reports | — | see [`SECURITY.md`](SECURITY.md) — do **not** open a public issue |
 
 ## License
@@ -640,4 +618,4 @@ discrepancy.
 
 ## Contributors
 
-[![Contributors](https://contrib.rocks/image?repo=aigbagbobila/soroban-cost-benchmarks)](https://github.com/aigbagbobila/soroban-cost-benchmarks/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=Stellar-Cost-Labs/soroban-cost-benchmarks)](https://github.com/Stellar-Cost-Labs/soroban-cost-benchmarks/graphs/contributors)
