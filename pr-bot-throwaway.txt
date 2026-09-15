@@ -1,0 +1,2 @@
+Throwaway file for live pr-comment bot verification against a ruleset-protected PR.
+This PR is temporary and will be closed without merging.
